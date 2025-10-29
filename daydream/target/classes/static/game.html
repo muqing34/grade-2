@@ -8,12 +8,40 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        /* 强制覆盖 input[type=number] 的箭头 (部分浏览器) */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield; /* Firefox */
+        }
+         /* (新) 简单的加载/保存反馈样式 */
+        .feedback-message {
+            position: fixed;
+            top: 80px; /* 导航栏下方 */
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.5s ease-out;
+            pointer-events: none; /* 防止遮挡按钮 */
+        }
+        .feedback-message.show {
+            opacity: 1;
+        }
+        .feedback-message.success { background-color: rgba(74, 222, 128, 0.8); } /* green-400 */
+        .feedback-message.error { background-color: rgba(248, 113, 113, 0.8); } /* red-400 */
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-white text-gray-900 min-h-screen">
 
 <!-- 导航栏 -->
-<nav class="bg-white shadow-md">
+<nav class="bg-gray-100 shadow-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex">
@@ -23,6 +51,9 @@
                 <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
                     <a href="game.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                         游戏
+                    </a>
+                    <a href="ai-chat.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        AI助手
                     </a>
                     <a href="knowledge.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                         心理科普
@@ -41,52 +72,120 @@
     </div>
 </nav>
 
+<!-- (新) 反馈消息容器 -->
+<div id="feedback-container"></div>
+
 <!-- 游戏内容区 -->
-<div class="py-10">
-    <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 class="text-3xl font-bold leading-tight text-gray-900">你的旅程</h1>
-    </header>
-    <main>
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 mt-6">
 
-                <!-- 玩家状态 -->
-                <div class="md:col-span-1">
-                    <div class="bg-white shadow-lg rounded-lg p-6">
-                        <h3 class="text-xl font-semibold mb-4 text-gray-900">玩家状态</h3>
-                        <div id="attributes-list" class="space-y-3">
-                            <p class="text-gray-600">正在加载属性...</p>
-                        </div>
-                        <button id="reset-button" class="w-full mt-6 bg-yellow-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-yellow-600 transition">
-                            重置游戏
-                        </button>
+    <!-- 1. 游戏开始菜单 (默认隐藏) -->
+    <div id="game-start-menu" class="hidden">
+        <div class="bg-white shadow-xl rounded-lg p-6">
+            <h1 class="text-3xl font-bold text-blue-600 mb-4 text-center">心智试炼</h1>
+            <p class="text-gray-600 mb-6 text-center">在开始之前，请确定你的初始心灵属性。</p>
+
+            <!-- 属性分配模式选择 -->
+            <div class="mb-6 text-center">
+                <label class="mr-4">
+                    <input type="radio" name="attrMode" value="roll" checked onchange="toggleAttributeMode('roll')"> 随机掷骰
+                </label>
+                <label>
+                    <input type="radio" name="attrMode" value="manual" onchange="toggleAttributeMode('manual')"> 手动分配 (共15点)
+                </label>
+            </div>
+
+            <!-- 属性显示/输入 -->
+            <div id="start-attributes-section" class="mb-6">
+                <!-- 随机模式 -->
+                <div id="roll-mode-attributes" class="grid grid-cols-3 gap-4">
+                    <!-- 初始属性将加载于此 -->
+                </div>
+                <!-- 手动模式 (默认隐藏) -->
+                <div id="manual-mode-attributes" class="hidden grid grid-cols-3 gap-4 items-center">
+                    <div>
+                        <label for="manual-insight" class="block text-sm font-medium text-gray-700 text-center">洞察力</label>
+                        <input type="number" id="manual-insight" name="insight" min="1" max="10" value="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-center text-xl font-bold" oninput="updateManualPoints()">
+                    </div>
+                    <div>
+                        <label for="manual-resolve" class="block text-sm font-medium text-gray-700 text-center">决心</label>
+                        <input type="number" id="manual-resolve" name="resolve" min="1" max="10" value="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-center text-xl font-bold" oninput="updateManualPoints()">
+                    </div>
+                    <div>
+                        <label for="manual-empathy" class="block text-sm font-medium text-gray-700 text-center">同理心</label>
+                        <input type="number" id="manual-empathy" name="empathy" min="1" max="10" value="5" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-center text-xl font-bold" oninput="updateManualPoints()">
                     </div>
                 </div>
+                <p id="manual-points-info" class="text-center text-sm mt-2 text-red-600 hidden"></p>
+            </div>
 
-                <!-- 游戏节点 -->
-                <div class="md:col-span-2">
-                    <div class="bg-white shadow-lg rounded-lg p-6 min-h-[300px]">
-                        <h3 class="text-xl font-semibold mb-4 text-gray-900">当前情景</h3>
-                        <div id="game-content" class="text-gray-700 leading-relaxed mb-6">
-                            <p>正在加载游戏内容...</p>
-                        </div>
+            <!-- 操作按钮 -->
+            <!-- (新) 添加读档按钮 -->
+            <button id="load-game-start-button" class="w-full mb-4 px-4 py-3 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition hidden">
+                读取存档
+            </button>
+            <button id="roll-attributes-button" class="w-full mb-4 px-4 py-3 font-semibold text-white bg-yellow-600 rounded-md hover:bg-yellow-700 transition">
+                随机属性 (总点数15)
+            </button>
+            <button id="start-adventure-button" class="w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition">
+                开始冒险
+            </button>
+            <p id="start-error-message" class="text-center text-sm mt-2 text-red-600 hidden"></p>
+        </div>
+    </div>
 
-                        <h4 class="text-lg font-semibold mb-4 text-gray-800">你的选择：</h4>
-                        <div id="choices-list" class="space-y-3">
-                            <!-- 选项将动态插入这里 -->
-                        </div>
-                    </div>
+    <!-- 2. 游戏主界面 (默认隐藏) -->
+    <div id="game-main-ui" class="hidden space-y-6">
+        <!-- 玩家状态 -->
+        <div class="bg-white shadow-lg rounded-lg p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-blue-700">玩家状态</h3>
+                <!-- (新) 存档/读档按钮 -->
+                <div class="space-x-2">
+                    <button id="save-game-button" class="px-3 py-1 text-sm font-medium text-white bg-green-500 rounded-md hover:bg-green-600 transition">存档</button>
+                    <button id="load-game-button" class="px-3 py-1 text-sm font-medium text-white bg-yellow-500 rounded-md hover:bg-yellow-600 transition">读档</button>
                 </div>
-
+            </div>
+            <div id="game-attributes-list" class="grid grid-cols-3 gap-4">
+                <!-- 游戏属性将加载于此 -->
             </div>
         </div>
-    </main>
+
+        <!-- 游戏节点 -->
+        <div class="bg-white shadow-lg rounded-lg p-6 min-h-[300px]">
+            <div id="game-content" class="text-gray-700 leading-relaxed mb-6 text-lg">
+                <p>正在加载游戏内容...</p>
+            </div>
+
+            <div id="choices-list" class="space-y-3">
+                <!-- 选项将动态插入这里 -->
+            </div>
+        </div>
+        <!-- 游戏重置按钮 -->
+        <div class="text-center mt-6">
+            <button id="reset-game-button" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition">
+                重置游戏
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. 游戏结束画面 (默认隐藏) -->
+    <div id="game-finish-screen" class="hidden">
+        <div class="bg-white shadow-xl rounded-lg p-6 text-center">
+            <h1 class="text-4xl font-bold text-green-600 mb-4">试炼完成</h1>
+            <p id="game-end-message" class="text-gray-700 mb-6 text-lg">你达成了结局。</p>
+
+            <button id="restart-button" class="w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition">
+                重新开始
+            </button>
+        </div>
+    </div>
+
 </div>
 
 <!-- 全局JS -->
 <script>
     // --- 认证与API工具 ---
-    const API_BASE = ''; // 假设和前端同源
+    const API_BASE = '';
 
     function getToken() {
         return localStorage.getItem('jwtToken');
@@ -94,10 +193,9 @@
 
     function logout() {
         localStorage.removeItem('jwtToken');
-        window.location.href = 'index.html';
+        window.location.href = '/index.html';
     }
 
-    // 检查是否登录，未登录则踢回登录页
     function checkAuth() {
         if (!getToken()) {
             console.log('未找到Token，正在重定向到登录页...');
@@ -121,131 +219,431 @@
         const response = await fetch(API_BASE + url, { ...options, headers });
 
         if (response.status === 401 || response.status === 403) {
-            // Token无效或过期
             logout();
             throw new Error('认证失败，请重新登录');
         }
-
         return response;
     }
 
-    // --- 页面逻辑 ---
-    document.addEventListener('DOMContentLoaded', () => {
-        checkAuth();
-        loadGameData();
+    // --- 页面元素 ---
+    const startMenu = document.getElementById('game-start-menu');
+    const gameUI = document.getElementById('game-main-ui');
+    const finishScreen = document.getElementById('game-finish-screen');
 
-        document.getElementById('logout-button').addEventListener('click', logout);
-        document.getElementById('reset-button').addEventListener('click', resetGame);
-    });
+    const startAttributesSection = document.getElementById('start-attributes-section');
+    const rollModeAttributes = document.getElementById('roll-mode-attributes');
+    const manualModeAttributes = document.getElementById('manual-mode-attributes');
+    const manualPointsInfo = document.getElementById('manual-points-info');
+    const startErrorMessage = document.getElementById('start-error-message');
 
-    const attributesList = document.getElementById('attributes-list');
+    const gameAttributesList = document.getElementById('game-attributes-list');
+
     const gameContent = document.getElementById('game-content');
     const choicesList = document.getElementById('choices-list');
+    const gameEndMessage = document.getElementById('game-end-message');
 
-    async function loadGameData() {
+    const rollButton = document.getElementById('roll-attributes-button');
+    const startButton = document.getElementById('start-adventure-button');
+    const restartButton = document.getElementById('restart-button');
+    const resetGameButton = document.getElementById('reset-game-button');
+    const saveGameButton = document.getElementById('save-game-button');
+    const loadGameButton = document.getElementById('load-game-button');
+    const loadGameStartButton = document.getElementById('load-game-start-button'); // 开始菜单的读档
+    const feedbackContainer = document.getElementById('feedback-container'); // 反馈消息
+
+    // --- 页面逻辑 ---
+    let currentAttributeMode = 'roll'; // 'roll' or 'manual'
+
+    document.addEventListener('DOMContentLoaded', () => {
+        checkAuth();
+
+        document.getElementById('logout-button').addEventListener('click', logout);
+        rollButton.addEventListener('click', rollAttributes);
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', resetGameAndReload);
+        resetGameButton.addEventListener('click', resetGameAndReload);
+        saveGameButton.addEventListener('click', saveGame); // 绑定存档
+        loadGameButton.addEventListener('click', loadGame); // 绑定读档
+        loadGameStartButton.addEventListener('click', loadGame); // 绑定开始菜单读档
+
+        // 初始加载
+        loadInitialState();
+    });
+
+    // 检查游戏是否已开始
+    async function loadInitialState() {
+        clearError(startErrorMessage);
         try {
-            // 同时获取状态和节点
-            const [stateRes, nodeRes] = await Promise.all([
-                fetchWithAuth('/api/game/state'),
-                fetchWithAuth('/api/game/current-node')
-            ]);
-
-            if (!stateRes.ok || !nodeRes.ok) {
-                throw new Error('加载游戏数据失败');
+            const state = await getGameState();
+             // (新) 检查是否有存档点（非 START）
+            if (state.lastSaveNodeId && state.lastSaveNodeId !== "START") {
+                 loadGameStartButton.classList.remove('hidden'); // 显示开始菜单的读档按钮
+            } else {
+                 loadGameStartButton.classList.add('hidden');
             }
 
-            const state = await stateRes.json();
-            const node = await nodeRes.json();
+            if (state.currentNodeId === "START") {
+                showStartMenu(state.attributes.attributes);
+                updateManualPoints(); // 初始化手动点数检查
+            } else {
+                 const node = await getCurrentNodeFromServer();
+                 if (node.choices && node.choices.length > 0) {
+                     renderAttributes(state.attributes.attributes, gameAttributesList);
+                     renderGameNode(node);
+                     showGameUI();
+                 } else {
+                     showFinishScreen(node.content);
+                 }
+            }
+        } catch (error) {
+            console.error('加载初始状态失败:', error);
+            showError(startErrorMessage, error.message || '加载游戏失败');
+        }
+    }
 
-            renderAttributes(state.attributes.attributes);
+    // --- 屏幕切换与模式切换 ---
+    function showStartMenu(attrs) {
+        renderAttributes(attrs, rollModeAttributes);
+        startMenu.classList.remove('hidden');
+        gameUI.classList.add('hidden');
+        finishScreen.classList.add('hidden');
+    }
+
+    function showGameUI() {
+        startMenu.classList.add('hidden');
+        gameUI.classList.remove('hidden');
+        finishScreen.classList.add('hidden');
+    }
+
+    function showFinishScreen(endMessage) {
+        gameEndMessage.innerHTML = endMessage.replace(/\(.*\)/, '<span class="text-yellow-600 font-semibold">$&</span>'); // 高亮结局
+        startMenu.classList.add('hidden');
+        gameUI.classList.add('hidden');
+        finishScreen.classList.remove('hidden');
+    }
+
+    function toggleAttributeMode(mode) {
+        currentAttributeMode = mode;
+        clearError(startErrorMessage);
+        if (mode === 'roll') {
+            rollModeAttributes.classList.remove('hidden');
+            manualModeAttributes.classList.add('hidden');
+            manualPointsInfo.classList.add('hidden');
+            rollButton.classList.remove('hidden');
+            startButton.disabled = false;
+        } else {
+            rollModeAttributes.classList.add('hidden');
+            manualModeAttributes.classList.remove('hidden');
+            manualPointsInfo.classList.remove('hidden');
+            rollButton.classList.add('hidden');
+            updateManualPoints();
+        }
+    }
+
+    // --- API 调用与逻辑 ---
+    async function getGameState() {
+        const response = await fetchWithAuth('/api/game/state');
+        if (!response.ok) throw new Error('无法加载游戏状态');
+        return await response.json();
+    }
+
+    async function getCurrentNodeFromServer() {
+         const response = await fetchWithAuth('/api/game/current-node');
+         if (!response.ok) throw new Error('无法加载当前节点');
+         return await response.json();
+    }
+
+
+    async function rollAttributes() {
+        rollButton.disabled = true;
+        rollButton.textContent = "掷骰中...";
+        clearError(startErrorMessage);
+        try {
+            const response = await fetchWithAuth('/api/game/roll-attributes', { method: 'POST' });
+            if (!response.ok) throw new Error('掷骰失败');
+            const state = await response.json();
+            renderAttributes(state.attributes.attributes, rollModeAttributes);
+        } catch (error) {
+            console.error('掷骰失败:', error);
+            showError(startErrorMessage, error.message);
+        } finally {
+            rollButton.disabled = false;
+            rollButton.textContent = "随机属性 (总点数15)";
+        }
+    }
+
+    function updateManualPoints() {
+        const insight = parseInt(document.getElementById('manual-insight').value) || 0;
+        const resolve = parseInt(document.getElementById('manual-resolve').value) || 0;
+        const empathy = parseInt(document.getElementById('manual-empathy').value) || 0;
+        const total = insight + resolve + empathy;
+        const minVal = 1;
+        const maxVal = 10;
+
+        let isValid = true;
+        let message = `当前总点数: ${total} / 15`;
+
+        if (total !== 15) {
+            isValid = false;
+            message += " (必须等于 15)";
+        }
+        if (insight < minVal || insight > maxVal || resolve < minVal || resolve > maxVal || empathy < minVal || empathy > maxVal) {
+             isValid = false;
+             message += ` (每项需在 ${minVal}-${maxVal} 之间)`;
+        }
+
+        manualPointsInfo.textContent = message;
+        manualPointsInfo.classList.toggle('text-red-600', !isValid);
+        manualPointsInfo.classList.toggle('text-green-600', isValid);
+        startButton.disabled = !isValid;
+    }
+
+
+    async function startGame() {
+        clearError(startErrorMessage);
+        startButton.disabled = true;
+        startButton.textContent = "正在开始...";
+
+        try {
+            let state;
+            if (currentAttributeMode === 'manual') {
+                const insight = parseInt(document.getElementById('manual-insight').value);
+                const resolve = parseInt(document.getElementById('manual-resolve').value);
+                const empathy = parseInt(document.getElementById('manual-empathy').value);
+                const attributes = { insight, resolve, empathy };
+
+                const setResponse = await fetchWithAuth('/api/game/set-attributes', {
+                    method: 'POST',
+                    body: JSON.stringify(attributes)
+                });
+                if (!setResponse.ok) {
+                    const errorText = await setResponse.text();
+                    throw new Error(`设置属性失败: ${errorText}`);
+                }
+                state = await setResponse.json();
+            } else {
+                state = await getGameState();
+            }
+
+            renderAttributes(state.attributes.attributes, gameAttributesList);
+            const node = await getCurrentNodeFromServer();
             renderGameNode(node);
+            showGameUI();
 
         } catch (error) {
-            console.error('加载游戏失败:', error);
-            gameContent.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+            console.error("开始游戏失败:", error);
+            showError(startErrorMessage, error.message);
+            startButton.disabled = false;
+            startButton.textContent = "开始冒险";
+             if (currentAttributeMode === 'manual') {
+                 updateManualPoints();
+             }
         }
-    }
-
-    function renderAttributes(attrs) {
-        attributesList.innerHTML = '';
-        if (Object.keys(attrs).length === 0) {
-            attributesList.innerHTML = '<p class="text-gray-500">暂无属性</p>';
-            return;
-        }
-        for (const [key, value] of Object.entries(attrs)) {
-            const attrEl = document.createElement('div');
-            attrEl.className = 'flex justify-between items-center bg-gray-50 p-3 rounded-md';
-            attrEl.innerHTML = `
-                <span class="text-gray-700 font-medium capitalize">${key}</span>
-                <span class="text-blue-600 font-bold text-lg">${value}</span>
-            `;
-            attributesList.appendChild(attrEl);
-        }
-    }
-
-    function renderGameNode(node) {
-        // 渲染情景
-        gameContent.innerHTML = `<p>${node.content.replace(/\n/g, '<br>')}</p>`;
-
-        // 渲染选项
-        choicesList.innerHTML = '';
-        if (!node.choices || node.choices.length === 0) {
-            choicesList.innerHTML = '<p class="text-gray-500">--- 旅程已达终点 ---</p>';
-            return;
-        }
-
-        node.choices.forEach(choice => {
-            const choiceButton = document.createElement('button');
-            choiceButton.className = 'w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 text-left';
-            choiceButton.textContent = choice.text;
-
-            // 添加属性要求提示
-            if (choice.requiredAttributes) {
-                let reqText = [];
-                for (const [key, value] of Object.entries(choice.requiredAttributes)) {
-                    reqText.push(`${key} > ${value-1}`);
-                }
-                choiceButton.innerHTML += ` <span class="text-xs text-blue-200">(${reqText.join(', ')})</span>`;
-            }
-
-            choiceButton.onclick = () => makeChoice(choice.choiceId);
-            choicesList.appendChild(choiceButton);
-        });
     }
 
     async function makeChoice(choiceId) {
+        if (choiceId === 'FAIL_BACK') {
+            try {
+                const node = await getCurrentNodeFromServer();
+                renderGameNode(node);
+            } catch (error) {
+                console.error('返回失败:', error);
+                gameContent.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+            }
+            return;
+        }
+
         try {
             const response = await fetchWithAuth('/api/game/choice', {
                 method: 'POST',
                 body: JSON.stringify({ choiceId }),
             });
 
+            const node = await response.json();
+
             if (!response.ok) {
-                throw new Error('选择失败');
+                if (response.status === 400 && node && node.nodeId === "FAILURE") {
+                    renderGameNode(node);
+                    return;
+                }
+                 const errorText = node ? JSON.stringify(node) : await response.text();
+                throw new Error(`选择失败 (${response.status}): ${errorText}`);
             }
 
-            // 选择成功后，重新加载游戏数据
-            loadGameData();
+            renderGameNode(node);
+            const state = await getGameState();
+            renderAttributes(state.attributes.attributes, gameAttributesList);
 
         } catch (error) {
             console.error('选择时发生错误:', error);
-            // 可以在这里显示一个短暂的错误提示
+            gameContent.innerHTML = `<p class="text-red-500">${error.message}</p>`;
         }
     }
 
-    async function resetGame() {
+    async function resetGameAndReload() {
         if (!confirm('确定要重置游戏吗？所有进度将丢失。')) {
             return;
         }
         try {
             await fetchWithAuth('/api/game/reset', { method: 'POST' });
-            // 重置成功后重新加载
-            loadGameData();
+            window.location.reload();
         } catch (error) {
             console.error('重置游戏失败:', error);
+            showFeedback('重置游戏失败', 'error');
         }
     }
+
+    // --- (新) 存档/读档 ---
+    async function saveGame() {
+        saveGameButton.disabled = true;
+        try {
+            const response = await fetchWithAuth('/api/game/save', { method: 'POST' });
+            if (response.ok) {
+                showFeedback('游戏已保存', 'success');
+                 // 更新开始菜单的读档按钮状态
+                loadGameStartButton.classList.remove('hidden');
+            } else {
+                 throw new Error('存档失败');
+            }
+        } catch (error) {
+             console.error('存档失败:', error);
+             showFeedback('存档失败', 'error');
+        } finally {
+            saveGameButton.disabled = false;
+        }
+    }
+
+    async function loadGame() {
+        loadGameButton.disabled = true;
+        loadGameStartButton.disabled = true; // 同时禁用开始菜单的按钮
+        try {
+            const response = await fetchWithAuth('/api/game/load', { method: 'POST' });
+            if (response.ok) {
+                const loadedNode = await response.json();
+                const state = await getGameState(); // 获取读档后的最新状态
+
+                renderAttributes(state.attributes.attributes, gameAttributesList); // 更新属性显示
+                renderGameNode(loadedNode); // 渲染读档的节点
+                showGameUI(); // 确保显示游戏界面
+                showFeedback('游戏已读取', 'success');
+            } else {
+                 throw new Error('读档失败');
+            }
+        } catch (error) {
+            console.error('读档失败:', error);
+             showFeedback('读档失败', 'error');
+             // 如果是从开始菜单读档失败，可能需要重置按钮状态
+        } finally {
+             loadGameButton.disabled = false;
+             loadGameStartButton.disabled = false;
+        }
+    }
+
+
+    // --- 渲染函数 ---
+    function renderAttributes(attrs, element) {
+        element.innerHTML = '';
+        if (!attrs || Object.keys(attrs).length === 0) {
+            element.innerHTML = '<p class="text-gray-500">暂无属性</p>';
+            return;
+        }
+
+        const attrMap = {
+            'insight': '洞察力',
+            'resolve': '决心',
+            'empathy': '同理心'
+        };
+
+        const attrOrder = ['insight', 'resolve', 'empathy'];
+
+        attrOrder.forEach(key => {
+            if (attrs.hasOwnProperty(key)) {
+                const value = attrs[key];
+                const attrEl = document.createElement('div');
+                attrEl.className = 'bg-gray-100 p-4 rounded-lg shadow-inner text-center';
+                attrEl.innerHTML = `
+                    <span class="text-gray-700 font-medium capitalize text-lg">${attrMap[key] || key}</span>
+                    <span class="text-blue-600 font-bold text-3xl block mt-1">${value}</span>
+                `;
+                element.appendChild(attrEl);
+            }
+        });
+    }
+
+
+    function renderGameNode(node) {
+        gameContent.innerHTML = `<p class="text-gray-800">${node.content.replace(/\n/g, '<br>')}</p>`;
+        choicesList.innerHTML = '';
+
+        if (!node.choices || node.choices.length === 0) {
+            showFinishScreen(node.content);
+            return;
+        }
+
+        node.choices.forEach(choice => {
+            const choiceButton = document.createElement('button');
+            choiceButton.className = 'w-full px-4 py-3 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 text-left shadow-md disabled:opacity-50 disabled:cursor-not-allowed'; // 添加 disabled 样式
+
+            let text = choice.text;
+
+            if (choice.requiredAttributes) {
+                const attrMap = { 'insight': '洞察', 'resolve': '决心', 'empathy': '同理心' };
+                let reqText = [];
+                for (const [key, value] of Object.entries(choice.requiredAttributes)) {
+                    reqText.push(`${attrMap[key] || key} > ${value-1}`);
+                }
+                text += ` <span class="text-xs text-blue-200">(${reqText.join(', ')})</span>`;
+            }
+
+            choiceButton.innerHTML = text;
+            choiceButton.onclick = () => {
+                 // 禁用所有按钮防止重复点击
+                 disableAllChoices();
+                 makeChoice(choice.choiceId);
+            };
+            choicesList.appendChild(choiceButton);
+        });
+    }
+
+    // (新) 禁用所有选项按钮
+    function disableAllChoices() {
+        const buttons = choicesList.querySelectorAll('button');
+        buttons.forEach(button => button.disabled = true);
+    }
+
+    // --- 辅助函数 ---
+     function showError(element, message) {
+        element.textContent = message;
+        element.classList.remove('hidden');
+    }
+
+    function clearError(element) {
+        element.textContent = '';
+        element.classList.add('hidden');
+    }
+
+     // (新) 显示反馈消息
+    function showFeedback(message, type = 'success') {
+        const feedbackEl = document.createElement('div');
+        feedbackEl.className = `feedback-message ${type}`;
+        feedbackEl.textContent = message;
+        feedbackContainer.appendChild(feedbackEl);
+
+        // Trigger reflow to apply transition
+        void feedbackEl.offsetWidth;
+
+        feedbackEl.classList.add('show');
+
+        setTimeout(() => {
+            feedbackEl.classList.remove('show');
+            setTimeout(() => {
+                feedbackEl.remove();
+            }, 500); // Wait for fade out transition
+        }, 2000); // Show message for 2 seconds
+    }
+
 
 </script>
 </body>
 </html>
+

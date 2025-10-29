@@ -24,6 +24,9 @@
                     <a href="game.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                         游戏
                     </a>
+                    <a href="ai-chat.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        AI助手
+                    </a>
                     <a href="knowledge.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                         心理科普
                     </a>
@@ -44,48 +47,75 @@
 <!-- 内容区 -->
 <div class="py-10">
     <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 class="text-3xl font-bold leading-tight text-gray-900">个人资料</h1>
+        <h1 class="text-3xl font-bold leading-tight text-gray-900">个人中心</h1>
     </header>
     <main>
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-6 space-y-6">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-            <!-- 上传头像 -->
-            <div class="bg-white shadow-lg rounded-lg p-6">
-                <h3 class="text-xl font-semibold mb-4 text-gray-900">上传头像</h3>
-                <form id="avatar-upload-form" class="space-y-4">
-                    <input type="file" id="avatar-file" name="file" required
-                           class="block w-full text-sm text-gray-500
-                                      file:mr-4 file:py-2 file:px-4
-                                      file:rounded-md file:border-0
-                                      file:text-sm file:font-semibold
-                                      file:bg-blue-50 file:text-blue-700
-                                      hover:file:bg-blue-100"/>
-                    <button type="submit"
-                            class="px-4 py-2 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition">
-                        上传
-                    </button>
-                </form>
-                <div id="upload-message" class="mt-4 hidden p-3 rounded-lg"></div>
+                <!-- 左侧：头像和用户信息 -->
+                <div class="md:col-span-1">
+                    <div class="bg-white shadow-lg rounded-lg p-6 text-center">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-900">欢迎你</h3>
+                        <!-- 头像显示 -->
+                        <img id="avatar-image"
+                             src="https://placehold.co/128x128/e0e7ff/3730a3?text=Avatar"
+                             alt="用户头像"
+                             class="w-32 h-32 rounded-full mx-auto mb-4 bg-gray-200 object-cover border-4 border-blue-200 shadow-sm">
+
+                        <h4 id="username-display" class="text-2xl font-bold text-blue-700">加载中...</h4>
+
+                        <!-- 上传表单 -->
+                        <form id="avatar-upload-form" class="mt-6 space-y-4">
+                            <label for="avatar-file" class="text-sm font-medium text-gray-700 block">更新头像</label>
+                            <input type="file" id="avatar-file" name="file" required
+                                   class="block w-full text-sm text-gray-500
+                                          file:mr-4 file:py-2 file:px-4
+                                          file:rounded-md file:border-0
+                                          file:text-sm file:font-semibold
+                                          file:bg-blue-50 file:text-blue-700
+                                          hover:file:bg-blue-100 cursor-pointer"/>
+                            <button type="submit"
+                                    class="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition">
+                                上传
+                            </button>
+                        </form>
+                        <div id="upload-message" class="mt-4 hidden p-3 rounded-lg"></div>
+                    </div>
+                </div>
+
+                <!-- 右侧：游戏状态和报告 -->
+                <div class="md:col-span-2 space-y-6">
+                    <!-- 游戏状态 -->
+                    <div class="bg-white shadow-lg rounded-lg p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-900">我的游戏属性</h3>
+                        <p class="text-gray-600 mb-4">这是你当前在游戏中的心灵属性。你可以在游戏开始时重新掷骰。</p>
+                        <div id="attributes-list" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <!-- 属性将动态加载于此 -->
+                            <p class="text-gray-500">正在加载属性...</p>
+                        </div>
+                    </div>
+
+                    <!-- 下载报告 -->
+                    <div class="bg-white shadow-lg rounded-lg p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-900">游戏报告</h3>
+                        <p class="text-gray-600 mb-4">根据你当前的游戏进度，生成一份心理状态分析报告（匿名或登录均可）。</p>
+                        <button id="download-report-button"
+                                class="px-4 py-2 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition">
+                            下载报告
+                        </button>
+                        <div id="download-message" class="mt-4 hidden p-3 rounded-lg text-red-700 bg-red-100"></div>
+                    </div>
+                </div>
+
             </div>
-
-            <!-- 下载报告 -->
-            <div class="bg-white shadow-lg rounded-lg p-6">
-                <h3 class="text-xl font-semibold mb-4 text-gray-900">游戏报告</h3>
-                <p class="text-gray-600 mb-4">根据你当前的游戏进度，生成一份心理状态分析报告。</p>
-                <button id="download-report-button"
-                        class="px-4 py-2 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition">
-                    下载报告
-                </button>
-                <div id="download-message" class="mt-4 hidden p-3 rounded-lg text-red-700 bg-red-100"></div>
-            </div>
-
         </div>
     </main>
 </div>
 
 <!-- 全局JS -->
 <script>
-    // --- 认证与API工具 (与 game.html 相同) ---
+    // --- 认证与API工具 ---
     const API_BASE = '';
 
     function getToken() {
@@ -94,7 +124,7 @@
 
     function logout() {
         localStorage.removeItem('jwtToken');
-        window.location.href = 'index.html';
+        window.location.href = '/index.html';
     }
 
     function checkAuth() {
@@ -110,7 +140,6 @@
             throw new Error('用户未认证');
         }
 
-        // 特殊处理：如果是FormData，不设置Content-Type，浏览器会自动设置
         const headers = { ...options.headers };
         if (!(options.body instanceof FormData)) {
             headers['Content-Type'] = 'application/json';
@@ -129,18 +158,108 @@
 
     // --- 页面逻辑 ---
     document.addEventListener('DOMContentLoaded', () => {
-        checkAuth();
-
+        checkAuth(); // 确保已登录
         document.getElementById('logout-button').addEventListener('click', logout);
 
+        // 加载用户信息
+        loadUserProfile();
+        loadGameAttributes();
+        loadAvatar();
+
+        // 绑定事件
         const uploadForm = document.getElementById('avatar-upload-form');
-        const uploadMessage = document.getElementById('upload-message');
         uploadForm.addEventListener('submit', handleAvatarUpload);
 
         const downloadButton = document.getElementById('download-report-button');
-        const downloadMessage = document.getElementById('download-message');
         downloadButton.addEventListener('click', handleReportDownload);
     });
+
+    // (新) 加载用户名
+    async function loadUserProfile() {
+        try {
+            const response = await fetchWithAuth('/api/user/me');
+            if (response.ok) {
+                const user = await response.json();
+                document.getElementById('username-display').textContent = user.username;
+            } else {
+                 document.getElementById('username-display').textContent = '加载失败';
+            }
+        } catch (error) {
+            console.error('加载用户信息失败:', error);
+            document.getElementById('username-display').textContent = '错误';
+        }
+    }
+
+    // (新) 加载头像
+    function loadAvatar() {
+        const avatarImg = document.getElementById('avatar-image');
+        const token = getToken();
+
+        // 使用时间戳作为查询参数来防止浏览器缓存旧头像
+        const avatarUrl = `/api/files/avatar?t=${new Date().getTime()}`;
+
+        fetch(avatarUrl, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            }
+            throw new Error('没有找到头像'); // 触发 catch
+        })
+        .then(blob => {
+            const objectURL = URL.createObjectURL(blob);
+            avatarImg.src = objectURL;
+        })
+        .catch(error => {
+            console.log('加载头像失败:', error);
+            // 保持占位符图像
+            avatarImg.src = 'https://placehold.co/128x128/e0e7ff/3730a3?text=Avatar';
+        });
+    }
+
+    // (新) 加载游戏属性
+    async function loadGameAttributes() {
+        const attributesList = document.getElementById('attributes-list');
+        try {
+            const response = await fetchWithAuth('/api/game/state');
+            if (response.ok) {
+                const state = await response.json();
+                renderAttributes(state.attributes.attributes);
+            } else {
+                attributesList.innerHTML = '<p class="text-red-500">加载属性失败</p>';
+            }
+        } catch (error) {
+            attributesList.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+        }
+    }
+
+    // (新) 渲染属性 (来自 game.html)
+    function renderAttributes(attrs) {
+        const attributesList = document.getElementById('attributes-list');
+        attributesList.innerHTML = '';
+        if (Object.keys(attrs).length === 0) {
+            attributesList.innerHTML = '<p class="text-gray-500">暂无属性</p>';
+            return;
+        }
+
+        const attrMap = {
+            'insight': '洞察力',
+            'resolve': '决心',
+            'empathy': '同理心'
+        };
+
+        for (const [key, value] of Object.entries(attrs)) {
+            const attrEl = document.createElement('div');
+            attrEl.className = 'bg-gray-50 p-4 rounded-lg shadow-inner text-center';
+            attrEl.innerHTML = `
+                <span class="text-gray-700 font-medium capitalize text-lg">${attrMap[key] || key}</span>
+                <span class="text-blue-600 font-bold text-3xl block mt-1">${value}</span>
+            `;
+            attributesList.appendChild(attrEl);
+        }
+    }
+
 
     // --- 头像上传 ---
     async function handleAvatarUpload(e) {
@@ -161,7 +280,6 @@
             const response = await fetchWithAuth('/api/files/upload/avatar', {
                 method: 'POST',
                 body: formData,
-                // 注意：当body是FormData时，不要手动设置Content-Type
             });
 
             const responseText = await response.text();
@@ -169,6 +287,8 @@
             if (response.ok) {
                 showMessage(messageEl, responseText, 'success');
                 fileInput.value = ''; // 清空选择
+                // (新) 上传成功后，立刻重新加载头像
+                loadAvatar();
             } else {
                 showMessage(messageEl, responseText || '上传失败。', 'error');
             }
@@ -184,15 +304,15 @@
         messageEl.classList.add('hidden');
 
         try {
+            // (更新) 现在使用 fetchWithAuth 来获取登录用户的报告
             const response = await fetchWithAuth('/api/files/download/report');
 
             if (!response.ok) {
                 throw new Error('无法生成报告');
             }
 
-            // 从 Content-Disposition 头获取文件名
             const disposition = response.headers.get('content-disposition');
-            let filename = 'psychological-report.txt'; // 默认
+            let filename = 'psychological-report.txt';
             if (disposition && disposition.indexOf('attachment') !== -1) {
                 const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
                 const matches = filenameRegex.exec(disposition);
@@ -230,3 +350,4 @@
 </script>
 </body>
 </html>
+

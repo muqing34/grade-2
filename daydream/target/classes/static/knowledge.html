@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>心理科普 - 心理文字游戏</title>
+    <title>心理学科普 - 心理文字游戏</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -24,6 +24,9 @@
                     <a href="game.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                         游戏
                     </a>
+                    <a href="ai-chat.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        AI助手
+                    </a>
                     <a href="knowledge.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
                         心理科普
                     </a>
@@ -33,7 +36,6 @@
                 </div>
             </div>
             <div class="flex items-center">
-                <!-- 根据是否登录决定显示 登出 或 登录 -->
                 <button id="auth-button" class="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700 transition">
                     <!-- JS会填充内容 -->
                 </button>
@@ -45,23 +47,73 @@
 <!-- 内容区 -->
 <div class="py-10">
     <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 class="text-3xl font-bold leading-tight text-gray-900">心理知识库</h1>
-        <p class="mt-2 text-gray-600">了解更多关于心理健康的知识（模拟API数据）。</p>
+        <h1 class="text-3xl font-bold leading-tight text-gray-900">心理学科普</h1>
+        <p class="mt-2 text-gray-600">搜索 OpenAlex 获取心理学相关文献。</p>
+        <!-- (新) 搜索栏 -->
+        <div class="mt-4 flex">
+            <input type="text" id="search-query" placeholder="输入关键词 (e.g., cognitive bias)"
+                   class="flex-grow px-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            <button id="search-button"
+                    class="px-4 py-2 font-semibold text-white bg-blue-600 rounded-r-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition duration-200">
+                搜索
+            </button>
+        </div>
     </header>
     <main>
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-6">
             <div id="articles-list" class="space-y-6">
                 <!-- 文章列表将动态加载于此 -->
-                <p class="text-gray-500">正在加载文章...</p>
+                <p class="text-gray-500">请输入关键词进行搜索...</p>
+            </div>
+            <!-- (新) 分页 -->
+            <div id="pagination" class="mt-6 flex justify-between items-center hidden">
+                <button id="prev-page" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                    &larr; 上一页
+                </button>
+                <span id="page-info" class="text-sm text-gray-600"></span>
+                <button id="next-page" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                    下一页 &rarr;
+                </button>
             </div>
         </div>
     </main>
 </div>
 
 <script>
+    let currentPage = 1;
+    let currentQuery = '';
+    let totalResults = 0;
+    const resultsPerPage = 10; // 与后端默认值一致
+
     document.addEventListener('DOMContentLoaded', () => {
         setupAuthButton();
-        loadArticles();
+        // 不再自动加载，等待用户搜索
+        // loadArticles();
+
+        document.getElementById('search-button').addEventListener('click', () => {
+             currentQuery = document.getElementById('search-query').value.trim();
+             if (currentQuery) {
+                 currentPage = 1; // 新搜索从第一页开始
+                 searchArticles();
+             } else {
+                  document.getElementById('articles-list').innerHTML = '<p class="text-red-500">请输入搜索关键词。</p>';
+                  document.getElementById('pagination').classList.add('hidden');
+             }
+        });
+
+        document.getElementById('prev-page').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                searchArticles();
+            }
+        });
+        document.getElementById('next-page').addEventListener('click', () => {
+             const totalPages = Math.ceil(totalResults / resultsPerPage);
+             if (currentPage < totalPages) { // 检查是否有下一页
+                 currentPage++;
+                 searchArticles();
+             }
+        });
     });
 
     // 设置右上角按钮（登录/登出）
@@ -73,30 +125,40 @@
             authButton.className = 'bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-red-700 transition';
             authButton.onclick = () => {
                 localStorage.removeItem('jwtToken');
-                window.location.href = 'index.html';
+                window.location.href = '/index.html'; // 使用根相对路径
             };
         } else {
             authButton.textContent = '登录';
             authButton.className = 'bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700 transition';
             authButton.onclick = () => {
-                window.location.href = 'index.html';
+                window.location.href = '/index.html'; // 使用根相对路径
             };
         }
     }
 
-    // 加载文章
-    async function loadArticles() {
+    // (新) 搜索文章
+    async function searchArticles() {
         const articlesList = document.getElementById('articles-list');
+        const pagination = document.getElementById('pagination');
+        articlesList.innerHTML = '<p class="text-gray-500">正在搜索...</p>'; // 显示加载状态
+        pagination.classList.add('hidden'); // 隐藏分页
+
         try {
-            // 此API是公开的，不需要JWT
-            const response = await fetch('/api/knowledge/articles');
+            // 注意：OpenAlex API 是公开的，这里不需要 token
+            const apiUrl = `/api/knowledge/search?query=${encodeURIComponent(currentQuery)}&page=${currentPage}&perPage=${resultsPerPage}`;
+            const response = await fetch(apiUrl);
 
             if (!response.ok) {
-                throw new Error('无法加载文章');
+                 if(response.status === 404) {
+                     throw new Error('没有找到相关文献。');
+                 }
+                throw new Error(`无法加载文献 (${response.status})`);
             }
 
-            const articles = await response.json();
-            renderArticles(articles);
+            const data = await response.json();
+            totalResults = data.meta ? data.meta.count : 0; // 更新总数
+            renderArticles(data.results);
+            updatePagination();
 
         } catch (error) {
             console.error('加载文章失败:', error);
@@ -104,26 +166,57 @@
         }
     }
 
-    function renderArticles(articles) {
+    // (更新) 渲染从 OpenAlex 获取的文章
+    function renderArticles(results) {
         const articlesList = document.getElementById('articles-list');
         articlesList.innerHTML = ''; // 清空加载提示
 
-        if (!articles || articles.length === 0) {
-            articlesList.innerHTML = '<p class="text-gray-500">暂无文章。</p>';
+        if (!results || results.length === 0) {
+            articlesList.innerHTML = '<p class="text-gray-500">没有找到相关文献。</p>';
             return;
         }
 
-        articles.forEach(article => {
+        results.forEach(work => {
             const articleEl = document.createElement('div');
             articleEl.className = 'bg-white shadow-lg rounded-lg p-6 hover:shadow-xl transition-shadow duration-300';
+
+            const title = work.displayName || '标题不可用';
+            const authors = work.authorNames || '作者信息不可用'; // 使用辅助方法
+            const year = work.publicationYear || '年份未知';
+            const doi = work.doiUrl; // 使用辅助方法获取 DOI Path
+            const openAlexUrl = `https://openalex.org/${work.id}`; // OpenAlex 链接
+
             articleEl.innerHTML = `
-                <h3 class="text-xl font-semibold mb-2 text-blue-700">${article.title}</h3>
-                <p class="text-gray-600">${article.summary}</p>
-                <a href="#" class="inline-block mt-4 text-sm font-medium text-blue-600 hover:text-blue-800">阅读更多 &rarr;</a>
+                <h3 class="text-xl font-semibold mb-2 text-blue-700">${title}</h3>
+                <p class="text-sm text-gray-500 mb-1">作者: ${authors}</p>
+                <p class="text-sm text-gray-500 mb-3">年份: ${year}</p>
+                <div class="space-x-4">
+                     <a href="${openAlexUrl}" target="_blank" class="inline-block text-sm font-medium text-blue-600 hover:text-blue-800">在 OpenAlex 查看 &rarr;</a>
+                     ${doi ? `<a href="https://doi.org/${doi}" target="_blank" class="inline-block text-sm font-medium text-green-600 hover:text-green-800">DOI: ${doi} &rarr;</a>` : ''}
+                </div>
             `;
             articlesList.appendChild(articleEl);
         });
     }
+
+     // (新) 更新分页信息和按钮状态
+    function updatePagination() {
+        const pagination = document.getElementById('pagination');
+        const pageInfo = document.getElementById('page-info');
+        const prevButton = document.getElementById('prev-page');
+        const nextButton = document.getElementById('next-page');
+
+        if (totalResults > 0) {
+            const totalPages = Math.ceil(totalResults / resultsPerPage);
+             pageInfo.textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页 (约 ${totalResults} 条结果)`;
+             prevButton.disabled = currentPage <= 1;
+             nextButton.disabled = currentPage >= totalPages;
+             pagination.classList.remove('hidden');
+        } else {
+             pagination.classList.add('hidden'); // 没有结果则隐藏分页
+        }
+    }
 </script>
 </body>
 </html>
+

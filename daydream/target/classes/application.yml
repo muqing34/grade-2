@@ -7,22 +7,27 @@ file:
 
 # JWT 配置
 jwt:
-  secret: "aVeryStrongAndLongSecretKeyForThisTextGameDemoProjectThatIsSecure" # 强密钥
-  expiration-ms: 3600000 # 1小时
+  secret: "aVeryStrongAndLongSecretKeyForThisTextGameDemoProjectThatIsSecure" # 强密钥 (请在生产环境中更换)
+  expiration-ms: 3600000 # 1小时 = 3600 * 1000 ms
 
-# 第三方API模拟配置
-external-api:
-  emotion-url: "https://api.example.com/analyze-emotion" # 模拟的情绪分析API
-  knowledge-url: "https://api.example.com/psychology-articles" # 模拟的心理知识API
+# DeepSeek API 配置 (保留)
+deepseek:
+  api:
+    url: https://api.deepseek.com/v1
+    key: sk-bdef1b7fc01b4addb3aaf2b19ca9e662 # (注意：请勿在生产代码中硬编码密钥)
 
-# Spring Security 配置
+# (新) OpenAlex API 配置
+openalex:
+  api:
+    url: https://api.openalex.org
+
+# Spring Security 配置 (无变化)
 spring:
   security:
-    user:
-      name: admin # 方便测试的内存用户
-      password: password
+  # ... (如果需要内存用户测试可以保留)
   # 文件上传大小限制
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+
