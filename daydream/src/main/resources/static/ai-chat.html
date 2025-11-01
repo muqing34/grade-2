@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI助手 - 心理文字游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* 聊天窗口样式 */
+        #chat-window { height: 400px; overflow-y: auto; border: 1px solid #e5e7eb; background: #f9fafb; padding: 12px; border-radius: 8px; }
+        .chat-message { padding: 8px 12px; border-radius: 12px; margin-bottom: 8px; max-width: 80%; line-height: 1.6; }
+        .chat-message.user { background-color: #dbeafe; color: #1e40af; align-self: flex-end; }
+        .chat-message.ai { background-color: #f3f4f6; color: #374151; align-self: flex-start; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+<!-- 导航栏 -->
+<nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex">
+                <div class="flex-shrink-0 flex items-center text-xl font-bold text-blue-600">
+                    心理冒险
+                </div>
+                <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                    <a href="game.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        游戏
+                    </a>
+                    <a href="ai-chat.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        AI助手
+                    </a>
+                    <a href="knowledge.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        心理科普
+                    </a>
+                    <a href="profile.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+                        个人资料
+                    </a>
+                </div>
+            </div>
+            <!-- --- 修复 1：修改按钮，使其能动态显示 登录/登出 --- -->
+            <div class="flex items-center">
+                <button id="auth-button" class="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700 transition">
+                    <!-- JS会填充内容 -->
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 内容区 -->
+<div class="py-10">
+    <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-3xl font-bold leading-tight text-gray-900">AI 心理助手</h1>
+    </header>
+    <main>
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-6 space-y-8">
+
+            <!-- 2. AI 聊天机器人 -->
+            <div class="bg-white shadow-lg rounded-lg p-6">
+                <h3 class="text-xl font-semibold mb-4 text-gray-900">与 AI 助手对话</h3>
+                <div id="chat-window" class="flex flex-col mb-4">
+                    <!-- 聊天消息将在这里显示 -->
+                    <div class="chat-message ai">你好！我是你的AI心理助手，有什么可以帮你的吗？</div>
+                </div>
+                <div class="flex space-x-2">
+                    <input type="text" id="chat-input" placeholder="输入你的消息..." class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <button id="chat-send-btn" class="px-4 py-2 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition">
+                        发送
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- 全局JS -->
+<script>
+    // --- 认证与API工具 ---
+    const API_BASE = '';
+
+    function getToken() {
+        return localStorage.getItem('jwtToken');
+    }
+
+    function logout() {
+        localStorage.removeItem('jwtToken');
+        window.location.href = '/index.html'; // 使用根相对路径
+    }
+
+    // ( fetchWithAuth 保留，供其他页面使用，但本页面聊天不使用它 )
+    async function fetchWithAuth(url, options = {}) {
+        const token = getToken();
+        if (!token) {
+            logout();
+            throw new Error('用户未认证');
+        }
+        // ... (fetchWithAuth 内部逻辑保持不变)
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            ...options.headers,
+        };
+        const response = await fetch(API_BASE + url, { ...options, headers });
+        if (response.status === 401 || response.status === 403) {
+            logout();
+            throw new Error('认证失败，请重新登录');
+        }
+        return response;
+    }
+
+    // --- 页面初始化 ---
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- 修复 2：不再强制检查登录，而是设置按钮状态 ---
+        setupAuthButton();
+
+        // AI 聊天
+        document.getElementById('chat-send-btn').addEventListener('click', handleChatSend);
+        document.getElementById('chat-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleChatSend();
+        });
+    });
+
+    // --- 新增：从 knowledge.html 复制过来的按钮设置函数 ---
+    function setupAuthButton() {
+        const token = localStorage.getItem('jwtToken');
+        const authButton = document.getElementById('auth-button');
+        if (token) {
+            authButton.textContent = '登出';
+            authButton.className = 'bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-red-700 transition';
+            authButton.onclick = () => {
+                localStorage.removeItem('jwtToken');
+                window.location.href = '/index.html';
+            };
+        } else {
+            authButton.textContent = '登录';
+            authButton.className = 'bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-blue-700 transition';
+            authButton.onclick = () => {
+                window.location.href = '/index.html';
+            };
+        }
+    }
+
+
+    // --- AI 聊天逻辑 (已修复) ---
+    const chatWindow = document.getElementById('chat-window');
+    const chatInput = document.getElementById('chat-input');
+    const chatSendBtn = document.getElementById('chat-send-btn');
+
+    let chatHistory = [
+        { role: "system", content: "你是一个专业的心理助手，请友好、简洁地回答用户问题。" }
+    ];
+
+    async function handleChatSend() {
+        const messageText = chatInput.value.trim();
+        if (!messageText) return;
+
+        addMessageToUI(messageText, 'user');
+        chatHistory.push({ role: "user", content: messageText });
+
+        chatInput.value = "";
+        chatSendBtn.disabled = true;
+
+        try {
+            // --- 修复 3：使用标准 fetch，不再使用 fetchWithAuth ---
+            const response = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // (不再发送 Authorization
+                },
+                body: JSON.stringify(chatHistory)
+            });
+
+            if (!response.ok) {
+                throw new Error('AI 响应错误');
+            }
+
+            const aiResponseText = await response.text();
+
+            addMessageToUI(aiResponseText, 'ai');
+            chatHistory.push({ role: "ai", content: aiResponseText });
+
+        } catch (error) {
+            addMessageToUI(`错误: ${error.message}`, 'ai');
+        } finally {
+            chatSendBtn.disabled = false;
+        }
+    }
+
+    function addMessageToUI(text, role) {
+        const messageEl = document.createElement('div');
+        messageEl.className = `chat-message ${role}`;
+        messageEl.textContent = text;
+        chatWindow.appendChild(messageEl);
+        chatWindow.scrollTop = chatWindow.scrollHeight; // 自动滚动到底部
+    }
+
+</script>
+</body>
+</html>
+

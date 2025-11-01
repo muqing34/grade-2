@@ -71,6 +71,12 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 1. 添加 WebFlux 依赖 (用于 WebClient) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+
         <!-- Spring Boot Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
