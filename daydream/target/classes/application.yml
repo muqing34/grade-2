@@ -31,3 +31,12 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
+  datasource:
+    url: jdbc:mysql://localhost:3306/text_game_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root # 替换为你的数据库用户名
+    password: mql123 # 替换为你的数据库密码
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    jpa:
+      hibernate:
+        ddl-auto: update # 启动时根据实体类更新表结构（开发环境推荐）
+      show-sql: true # 打印执行的 SQL 语句
