@@ -1,6 +1,7 @@
 package com.example.textgame.service;
 
 import com.example.textgame.model.GameState;
+import com.example.textgame.model.PlayerAttributes;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -17,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List; // 导入 List
 
 @Service
 public class FileStorageService {
@@ -42,7 +44,14 @@ public class FileStorageService {
      */
     public String storeFile(MultipartFile file, String username) {
         String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
-        String filename = username + "_" + originalFilename;
+        String fileExtension = "";
+        try {
+            fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        } catch (Exception e) {
+            fileExtension = ".png"; // 默认
+        }
+        String filename = username + "_" + System.currentTimeMillis() + fileExtension;
+
 
         try {
             if (filename.contains("..")) {
@@ -51,8 +60,7 @@ public class FileStorageService {
             Path targetLocation = this.fileStorageLocation.resolve(filename);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-            // 更新用户头像路径
-            userService.updateUserAvatar(username, targetLocation.toString());
+            userService.updateUserAvatar(username, filename);
 
             return filename;
         } catch (IOException ex) {
@@ -82,28 +90,43 @@ public class FileStorageService {
      */
     public Resource generatePsychologicalReport(String userId) {
         GameState state = gameService.getOrCreateGameState(userId);
+        PlayerAttributes attrs = state.getAttributes();
 
         // 基于游戏状态生成报告内容
         StringBuilder report = new StringBuilder();
         report.append("--- 心理游戏测试报告 ---\n\n");
         report.append("用户ID: ").append(userId).append("\n\n");
         report.append("最终属性:\n");
-        state.getAttributes().getAttributes().forEach((key, value) ->
-                report.append("  - ").append(key).append(": ").append(value).append("\n")
-        );
+
+        report.append("  - 洞察力 (insight): ").append(attrs.getInsight()).append("\n");
+        report.append("  - 决心 (resolve): ").append(attrs.getResolve()).append("\n");
+        report.append("  - 同理心 (empathy): ").append(attrs.getEmpathy()).append("\n");
+
         report.append("\n");
         report.append("最终节点: ").append(state.getCurrentNodeId()).append("\n\n");
 
-        // 根据属性和节点给出简单分析
-        if (state.getAttributes().getAttribute("wisdom") > 8) {
+        if (attrs.getAttribute("insight") > 8) {
             report.append("分析: 你倾向于使用智慧解决问题，思维缜密。\n");
-        } else if (state.getAttributes().getAttribute("courage") > 8) {
+        } else if (attrs.getAttribute("resolve") > 8) {
             report.append("分析: 你是一个勇敢的行动者，敢于冒险。\n");
-        } else if (state.getAttributes().getAttribute("kindness") > 8) {
+        } else if (attrs.getAttribute("empathy") > 8) {
             report.append("分析: 你内心善良，乐于助人。\n");
         } else {
             report.append("分析: 你在各个方面都保持着平衡。\n");
         }
+
+        // 需求 3：添加选择历史
+        report.append("\n\n--- 游戏选择历史 ---\n");
+        List<String> history = state.getChoiceHistory();
+        if (history == null || history.isEmpty()) {
+            report.append("  (无选择记录)\n");
+        } else {
+            int i = 1;
+            for (String choice : history) {
+                report.append("  ").append(i++).append(". ").append(choice).append("\n");
+            }
+        }
+        // --- 报告结束 ---
 
         // 将字符串转换为输入流资源
         InputStream is = new ByteArrayInputStream(report.toString().getBytes());

@@ -225,7 +225,8 @@
             const response = await fetchWithAuth('/api/game/state');
             if (response.ok) {
                 const state = await response.json();
-                renderAttributes(state.attributes.attributes);
+                // (BUG 修复) 直接传递 state.attributes
+                renderAttributes(state.attributes);
             } else {
                 attributesList.innerHTML = '<p class="text-red-500">加载属性失败</p>';
             }
@@ -238,7 +239,8 @@
     function renderAttributes(attrs) {
         const attributesList = document.getElementById('attributes-list');
         attributesList.innerHTML = '';
-        if (Object.keys(attrs).length === 0) {
+        // (BUG 修复) 增加对 attrs 存在性的检查
+        if (!attrs || Object.keys(attrs).length === 0) {
             attributesList.innerHTML = '<p class="text-gray-500">暂无属性</p>';
             return;
         }
@@ -249,14 +251,18 @@
             'empathy': '同理心'
         };
 
+        // (BUG 修复) 直接遍历 attrs 对象
         for (const [key, value] of Object.entries(attrs)) {
-            const attrEl = document.createElement('div');
-            attrEl.className = 'bg-gray-50 p-4 rounded-lg shadow-inner text-center';
-            attrEl.innerHTML = `
-                <span class="text-gray-700 font-medium capitalize text-lg">${attrMap[key] || key}</span>
-                <span class="text-blue-600 font-bold text-3xl block mt-1">${value}</span>
-            `;
-            attributesList.appendChild(attrEl);
+            // 确保只渲染我们关心的属性
+            if (attrMap[key]) {
+                const attrEl = document.createElement('div');
+                attrEl.className = 'bg-gray-50 p-4 rounded-lg shadow-inner text-center';
+                attrEl.innerHTML = `
+                    <span class="text-gray-700 font-medium capitalize text-lg">${attrMap[key]}</span>
+                    <span class="text-blue-600 font-bold text-3xl block mt-1">${value}</span>
+                `;
+                attributesList.appendChild(attrEl);
+            }
         }
     }
 
@@ -350,4 +356,3 @@
 </script>
 </body>
 </html>
-

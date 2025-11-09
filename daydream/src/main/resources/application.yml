@@ -3,40 +3,48 @@ server:
 
 # 文件上传配置
 file:
-  upload-dir: ./uploads/avatars # 文件存储目录
+  upload-dir: ./uploads/avatars
 
 # JWT 配置
 jwt:
-  secret: "aVeryStrongAndLongSecretKeyForThisTextGameDemoProjectThatIsSecure" # 强密钥 (请在生产环境中更换)
-  expiration-ms: 3600000 # 1小时 = 3600 * 1000 ms
+  secret: "aVeryStrongAndLongSecretKeyForThisTextGameDemoProjectThatIsSecure"
+  expiration-ms: 3600000
 
-# DeepSeek API 配置 (保留)
+# DeepSeek API 配置
 deepseek:
   api:
     url: https://api.deepseek.com/v1
-    key: sk-bdef1b7fc01b4addb3aaf2b19ca9e662 # (注意：请勿在生产代码中硬编码密钥)
+    key: sk-bdef1b7fc01b4addb3aaf2b19ca9e662
 
-# (新) OpenAlex API 配置
+# OpenAlex API 配置
 openalex:
   api:
     url: https://api.openalex.org
 
-# Spring Security 配置 (无变化)
+# Spring 配置
 spring:
   security:
-  # ... (如果需要内存用户测试可以保留)
-  # 文件上传大小限制
+
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
 
+  # 数据库连接
   datasource:
     url: jdbc:mysql://localhost:3306/text_game_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root # 替换为你的数据库用户名
-    password: mql123 # 替换为你的数据库密码
+    username: root
+    password: mysql123
     driver-class-name: com.mysql.cj.jdbc.Driver
-    jpa:
+
+  # JPA 配置
+  jpa:
+    hibernate:
+      # (最终修复)
+      # 设置为 "validate"，Hibernate 将只检查表结构是否匹配
+      ddl-auto: validate
+    show-sql: true
+
+    properties:
       hibernate:
-        ddl-auto: update # 启动时根据实体类更新表结构（开发环境推荐）
-      show-sql: true # 打印执行的 SQL 语句
+        dialect: org.hibernate.dialect.MySQLDialect
