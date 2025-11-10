@@ -1,6 +1,5 @@
 package com.example.textgame.config;
 
-// import org.springframework.beans.factory.annotation.Qualifier; // 移除未使用的导入
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,14 +16,12 @@ public class WebClientConfig {
     @Value("${deepseek.api.key}")
     private String deepseekApiKey;
 
-    @Value("${openalex.api.url}")
-    private String openalexApiUrl;
+    // (已删除 openalexApiUrl)
 
     /**
-     * WebClient for DeepSeek API. Bean name will be "webClientDeepSeek" by default.
+     * WebClient for DeepSeek API
      */
     @Bean
-    // @Qualifier("webClientDeepSeek") // 移除这里的 @Qualifier
     public WebClient webClientDeepSeek(WebClient.Builder builder) {
         return builder
                 .baseUrl(deepseekApiUrl)
@@ -33,16 +30,5 @@ public class WebClientConfig {
                 .build();
     }
 
-    /**
-     * WebClient for OpenAlex API. Bean name will be "webClientOpenAlex" by default.
-     */
-    @Bean
-    // @Qualifier("webClientOpenAlex") // 移除这里的 @Qualifier
-    public WebClient webClientOpenAlex(WebClient.Builder builder) {
-        return builder
-                .baseUrl(openalexApiUrl)
-                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .build();
-    }
+    // (已删除 webClientOpenAlex Bean)
 }
-
