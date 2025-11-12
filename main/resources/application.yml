@@ -1,0 +1,51 @@
+server:
+  port: 8089
+
+# 文件上传配置
+file:
+  upload-dir: ./uploads/avatars # 文件存储目录
+
+# JWT 配置
+jwt:
+  secret: "aVeryStrongAndLongSecretKeyForThisTextGameDemoProjectThatIsSecure"
+  expiration-ms: 3600000 # 1小时
+
+# DeepSeek API 配置 (保留)
+deepseek:
+  api:
+    url: https://api.deepseek.com/v1
+    key: sk-bdef1b7fc01b4addb3aaf2b19ca9e662 # (注意：请勿在生产代码中硬编码密钥)
+
+# Spring 配置
+spring:
+  security:
+  # ...
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/text_game_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: mysql123 # 确保这里是你Navicat中正确的密码
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate # 我们使用 SQL 手动创建了表
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  # (新) Redis 和 缓存(Cache)配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      # 如果你的 Redis 设置了密码，请取消注释下一行
+      # password: your_redis_password
+  cache:
+    type: redis # 告诉 Spring Boot 使用 Redis 作为缓存

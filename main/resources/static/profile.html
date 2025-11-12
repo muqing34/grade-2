@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资料 - 心理文字游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+<!-- 导航栏 -->
+<nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex">
+                <div class="flex-shrink-0 flex items-center text-xl font-bold text-blue-600">
+                    心理冒险
+                </div>
+                <!-- 修复2：移除 'hidden' 并调整间距和字体大小，使其在移动端可见 -->
+                <div class="ml-2 sm:ml-6 flex items-center space-x-1 sm:space-x-8">
+                    <a href="game.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 sm:px-1 pt-1 border-b-2 text-xs sm:text-sm font-medium">
+                        游戏
+                    </a>
+                    <a href="ai-chat.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 sm:px-1 pt-1 border-b-2 text-xs sm:text-sm font-medium">
+                        AI助手
+                    </a>
+                    <a href="knowledge.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 sm:px-1 pt-1 border-b-2 text-xs sm:text-sm font-medium">
+                        心理科普
+                    </a>
+                    <a href="profile.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 sm:px-1 pt-1 border-b-2 text-xs sm:text-sm font-medium">
+                        个人资料
+                    </a>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <button id="logout-button" class="bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium hover:bg-red-700 transition">
+                    登出
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- 内容区 -->
+<div class="py-10">
+    <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-3xl font-bold leading-tight text-gray-900">个人中心</h1>
+    </header>
+    <main>
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 mt-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- 左侧：头像和用户信息 -->
+                <div class="md:col-span-1">
+                    <div class="bg-white shadow-lg rounded-lg p-6 text-center">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-900">欢迎你</h3>
+                        <!-- 头像显示 -->
+                        <img id="avatar-image"
+                             src="https://placehold.co/128x128/e0e7ff/3730a3?text=Avatar"
+                             alt="用户头像"
+                             class="w-32 h-32 rounded-full mx-auto mb-4 bg-gray-200 object-cover border-4 border-blue-200 shadow-sm">
+
+                        <h4 id="username-display" class="text-2xl font-bold text-blue-700">加载中...</h4>
+
+                        <!-- 上传表单 -->
+                        <form id="avatar-upload-form" class="mt-6 space-y-4">
+                            <label for="avatar-file" class="text-sm font-medium text-gray-700 block">更新头像</label>
+                            <input type="file" id="avatar-file" name="file" required
+                                   class="block w-full text-sm text-gray-500
+                                          file:mr-4 file:py-2 file:px-4
+                                          file:rounded-md file:border-0
+                                          file:text-sm file:font-semibold
+                                          file:bg-blue-50 file:text-blue-700
+                                          hover:file:bg-blue-100 cursor-pointer"/>
+                            <button type="submit"
+                                    class="w-full px-4 py-2 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition">
+                                上传
+                            </button>
+                        </form>
+                        <div id="upload-message" class="mt-4 hidden p-3 rounded-lg"></div>
+                    </div>
+                </div>
+
+                <!-- 右侧：游戏状态和报告 -->
+                <div class="md:col-span-2 space-y-6">
+                    <!-- 游戏状态 -->
+                    <div class="bg-white shadow-lg rounded-lg p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-900">我的游戏属性</h3>
+                        <p class="text-gray-600 mb-4">这是你当前在游戏中的心灵属性。你可以在游戏开始时重新掷骰。</p>
+                        <div id="attributes-list" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <!-- 属性将动态加载于此 -->
+                            <p class="text-gray-500">正在加载属性...</p>
+                        </div>
+                    </div>
+
+                    <!-- 下载报告 -->
+                    <div class="bg-white shadow-lg rounded-lg p-6">
+                        <h3 class="text-xl font-semibold mb-4 text-gray-900">游戏报告</h3>
+                        <p class="text-gray-600 mb-4">根据你当前的游戏进度，生成一份心理状态分析报告（匿名或登录均可）。</p>
+                        <button id="download-report-button"
+                                class="px-4 py-2 font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition">
+                            下载报告
+                        </button>
+                        <div id="download-message" class="mt-4 hidden p-3 rounded-lg text-red-700 bg-red-100"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- 全局JS -->
+<script>
+    // --- 认证与API工具 ---
+    const API_BASE = '';
+
+    function getToken() {
+        return localStorage.getItem('jwtToken');
+    }
+
+    function logout() {
+        localStorage.removeItem('jwtToken');
+        window.location.href = '/index.html';
+    }
+
+    function checkAuth() {
+        if (!getToken()) {
+            logout();
+        }
+    }
+
+    async function fetchWithAuth(url, options = {}) {
+        const token = getToken();
+        if (!token) {
+            logout();
+            throw new Error('用户未认证');
+        }
+
+        const headers = { ...options.headers };
+        if (!(options.body instanceof FormData)) {
+            headers['Content-Type'] = 'application/json';
+        }
+        headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(API_BASE + url, { ...options, headers });
+
+        if (response.status === 401 || response.status === 403) {
+            logout();
+            throw new Error('认证失败，请重新登录');
+        }
+
+        return response;
+    }
+
+    // --- 页面逻辑 ---
+    document.addEventListener('DOMContentLoaded', () => {
+        checkAuth(); // 确保已登录
+        document.getElementById('logout-button').addEventListener('click', logout);
+
+        // 加载用户信息
+        loadUserProfile();
+        loadGameAttributes();
+        loadAvatar();
+
+        // 绑定事件
+        const uploadForm = document.getElementById('avatar-upload-form');
+        uploadForm.addEventListener('submit', handleAvatarUpload);
+
+        const downloadButton = document.getElementById('download-report-button');
+        downloadButton.addEventListener('click', handleReportDownload);
+    });
+
+    // (新) 加载用户名
+    async function loadUserProfile() {
+        try {
+            const response = await fetchWithAuth('/api/user/me');
+            if (response.ok) {
+                const user = await response.json();
+                document.getElementById('username-display').textContent = user.username;
+            } else {
+                 document.getElementById('username-display').textContent = '加载失败';
+            }
+        } catch (error) {
+            console.error('加载用户信息失败:', error);
+            document.getElementById('username-display').textContent = '错误';
+        }
+    }
+
+    // (新) 加载头像
+    function loadAvatar() {
+        const avatarImg = document.getElementById('avatar-image');
+        const token = getToken();
+
+        // 使用时间戳作为查询参数来防止浏览器缓存旧头像
+        const avatarUrl = `/api/files/avatar?t=${new Date().getTime()}`;
+
+        fetch(avatarUrl, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            }
+            throw new Error('没有找到头像'); // 触发 catch
+        })
+        .then(blob => {
+            const objectURL = URL.createObjectURL(blob);
+            avatarImg.src = objectURL;
+        })
+        .catch(error => {
+            console.log('加载头像失败:', error);
+            // 保持占位符图像
+            avatarImg.src = 'https://placehold.co/128x128/e0e7ff/3730a3?text=Avatar';
+        });
+    }
+
+    // (新) 加载游戏属性
+    async function loadGameAttributes() {
+        const attributesList = document.getElementById('attributes-list');
+        try {
+            const response = await fetchWithAuth('/api/game/state');
+            if (response.ok) {
+                const state = await response.json();
+                // (BUG 修复) 直接传递 state.attributes
+                renderAttributes(state.attributes);
+            } else {
+                attributesList.innerHTML = '<p class="text-red-500">加载属性失败</p>';
+            }
+        } catch (error) {
+            attributesList.innerHTML = `<p class="text-red-500">${error.message}</p>`;
+        }
+    }
+
+    // (新) 渲染属性 (来自 game.html)
+    function renderAttributes(attrs) {
+        const attributesList = document.getElementById('attributes-list');
+        attributesList.innerHTML = '';
+        // (BUG 修复) 增加对 attrs 存在性的检查
+        if (!attrs || Object.keys(attrs).length === 0) {
+            attributesList.innerHTML = '<p class="text-gray-500">暂无属性</p>';
+            return;
+        }
+
+        const attrMap = {
+            'insight': '洞察力',
+            'resolve': '决心',
+            'empathy': '同理心'
+        };
+
+        // (BUG 修复) 直接遍历 attrs 对象
+        for (const [key, value] of Object.entries(attrs)) {
+            // 确保只渲染我们关心的属性
+            if (attrMap[key]) {
+                const attrEl = document.createElement('div');
+                attrEl.className = 'bg-gray-50 p-4 rounded-lg shadow-inner text-center';
+                attrEl.innerHTML = `
+                    <span class="text-gray-700 font-medium capitalize text-lg">${attrMap[key]}</span>
+                    <span class="text-blue-600 font-bold text-3xl block mt-1">${value}</span>
+                `;
+                attributesList.appendChild(attrEl);
+            }
+        }
+    }
+
+
+    // --- 头像上传 ---
+    async function handleAvatarUpload(e) {
+        e.preventDefault();
+        const fileInput = document.getElementById('avatar-file');
+        const messageEl = document.getElementById('upload-message');
+        messageEl.classList.add('hidden');
+
+        if (fileInput.files.length === 0) {
+            showMessage(messageEl, '请先选择一个文件。', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        try {
+            const response = await fetchWithAuth('/api/files/upload/avatar', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const responseText = await response.text();
+
+            if (response.ok) {
+                showMessage(messageEl, responseText, 'success');
+                fileInput.value = ''; // 清空选择
+                // (新) 上传成功后，立刻重新加载头像
+                loadAvatar();
+            } else {
+                showMessage(messageEl, responseText || '上传失败。', 'error');
+            }
+        } catch (error) {
+            console.error('上传失败:', error);
+            showMessage(messageEl, '网络错误，上传失败。', 'error');
+        }
+    }
+
+    // --- 报告下载 ---
+    async function handleReportDownload() {
+        const messageEl = document.getElementById('download-message');
+        messageEl.classList.add('hidden');
+
+        try {
+            // (更新) 现在使用 fetchWithAuth 来获取登录用户的报告
+            const response = await fetchWithAuth('/api/files/download/report');
+
+            if (!response.ok) {
+                throw new Error('无法生成报告');
+            }
+
+            const disposition = response.headers.get('content-disposition');
+            let filename = 'psychological-report.txt';
+            if (disposition && disposition.indexOf('attachment') !== -1) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
+                }
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+
+        } catch (error) {
+            console.error('下载失败:', error);
+            showMessage(messageEl, '下载报告失败，请稍后重试。', 'error');
+        }
+    }
+
+    // --- 通用消息显示 ---
+    function showMessage(element, msg, type) {
+        element.textContent = msg;
+        if (type === 'success') {
+            element.className = 'p-3 rounded-lg text-green-700 bg-green-100';
+        } else {
+            element.className = 'p-3 rounded-lg text-red-700 bg-red-100';
+        }
+    }
+</script>
+</body>
+</html>
