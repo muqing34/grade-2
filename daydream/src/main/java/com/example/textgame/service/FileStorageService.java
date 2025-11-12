@@ -1,6 +1,7 @@
 package com.example.textgame.service;
 
 import com.example.textgame.model.GameState;
+import com.example.textgame.model.PlayerAttributes;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -33,35 +34,42 @@ public class FileStorageService {
         try {
             Files.createDirectories(this.fileStorageLocation);
         } catch (Exception ex) {
-            throw new RuntimeException("无法创建存储目录", ex);
+            throw new RuntimeException("無法創建存儲目錄", ex);
         }
     }
 
     /**
-     * 存储上传的文件（例如头像）
+     * 存儲上傳的文件（例如頭像）
      */
     public String storeFile(MultipartFile file, String username) {
         String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
-        String filename = username + "_" + originalFilename;
+        String fileExtension = "";
+        try {
+            fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        } catch (Exception e) {
+            fileExtension = ".png"; // 默認
+        }
+        String filename = username + "_" + System.currentTimeMillis() + fileExtension;
+
 
         try {
             if (filename.contains("..")) {
-                throw new RuntimeException("文件名包含无效路径");
+                throw new RuntimeException("文件名包含無效路徑");
             }
             Path targetLocation = this.fileStorageLocation.resolve(filename);
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
-            // 更新用户头像路径
-            userService.updateUserAvatar(username, targetLocation.toString());
+            // 儲存相對路徑或僅文件名
+            userService.updateUserAvatar(username, filename);
 
             return filename;
         } catch (IOException ex) {
-            throw new RuntimeException("存储文件失败", ex);
+            throw new RuntimeException("儲存文件失敗", ex);
         }
     }
 
     /**
-     * 加载文件（例如头像）
+     * 加載文件（例如頭像）
      */
     public Resource loadFileAsResource(String filename) {
         try {
@@ -78,34 +86,49 @@ public class FileStorageService {
     }
 
     /**
-     * 动态生成心理测试报告（内存）
+     * 動態生成心理測試報告（內存）
      */
     public Resource generatePsychologicalReport(String userId) {
         GameState state = gameService.getOrCreateGameState(userId);
+        PlayerAttributes attrs = state.getAttributes();
 
-        // 基于游戏状态生成报告内容
+        // 基於遊戲狀態生成報告內容
         StringBuilder report = new StringBuilder();
-        report.append("--- 心理游戏测试报告 ---\n\n");
-        report.append("用户ID: ").append(userId).append("\n\n");
-        report.append("最终属性:\n");
-        state.getAttributes().getAttributes().forEach((key, value) ->
-                report.append("  - ").append(key).append(": ").append(value).append("\n")
-        );
-        report.append("\n");
-        report.append("最终节点: ").append(state.getCurrentNodeId()).append("\n\n");
+        report.append("--- 心理遊戲測試報告 ---\n\n");
+        report.append("用戶ID: ").append(userId).append("\n\n");
+        report.append("最終屬性:\n");
 
-        // 根据属性和节点给出简单分析
-        if (state.getAttributes().getAttribute("wisdom") > 8) {
-            report.append("分析: 你倾向于使用智慧解决问题，思维缜密。\n");
-        } else if (state.getAttributes().getAttribute("courage") > 8) {
-            report.append("分析: 你是一个勇敢的行动者，敢于冒险。\n");
-        } else if (state.getAttributes().getAttribute("kindness") > 8) {
-            report.append("分析: 你内心善良，乐于助人。\n");
+        report.append("  - 洞察力 (insight): ").append(attrs.getInsight()).append("\n");
+        report.append("  - 決心 (resolve): ").append(attrs.getResolve()).append("\n");
+        report.append("  - 同理心 (empathy): ").append(attrs.getEmpathy()).append("\n");
+
+        report.append("\n");
+        report.append("最終節點: ").append(state.getCurrentNodeId()).append("\n\n");
+
+        // 根據屬性和節點給出簡單分析
+        if (attrs.getAttribute("insight") > 8) {
+            report.append("分析: 你傾向於使用智慧解決問題，思維縝密。\n");
+        } else if (attrs.getAttribute("resolve") > 8) {
+            report.append("分析: 你是一個勇敢的行動者，敢於冒險。\n");
+        } else if (attrs.getAttribute("empathy") > 8) {
+            report.append("分析: 你內心善良，樂於助人。\n");
         } else {
-            report.append("分析: 你在各个方面都保持着平衡。\n");
+            report.append("分析: 你在各個方面都保持著平衡。\n");
         }
 
-        // 将字符串转换为输入流资源
+        // (新) 添加選擇歷史
+        report.append("\n--- 你的選擇歷史 ---\n");
+        if (state.getChoiceHistory() == null || state.getChoiceHistory().isEmpty()) {
+            report.append("你沒有做出任何選擇。\n");
+        } else {
+            int step = 1;
+            for (String choice : state.getChoiceHistory()) {
+                report.append(step).append(". ").append(choice).append("\n");
+                step++;
+            }
+        }
+
+        // 將字符串轉換為輸入流資源
         InputStream is = new ByteArrayInputStream(report.toString().getBytes());
         return new InputStreamResource(is);
     }
